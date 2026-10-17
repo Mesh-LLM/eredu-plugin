@@ -1,0 +1,53 @@
+name: Verify and release
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Metal toolchain
+        run: |
+          xcrun metal --version || { xcodebuild -downloadComponent MetalToolchain && xcrun metal --version; }
+      - name: Verify (mock tests, fmt, clippy)
+        run: |
+          cargo fmt --all --check
+          cargo test --locked --all-targets
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo clippy --locked --release --features mlx --all-targets -- -D warnings
+      - name: Package
+        run: bash scripts/package-macos.sh "v0.1.${{ github.run_number }}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: eredu-plugin-aarch64-apple-darwin
+          path: dist/*
+          retention-days: 7
+  release:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: eredu-plugin-aarch64-apple-darwin
+          path: dist
+      - name: Publish latest release from main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v0.1.${{ github.run_number }}
+        run: |
+          gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "$TAG" --notes "Built from main at $GITHUB_SHA." --latest

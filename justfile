@@ -13,3 +13,7 @@ check-native:
 
 clean:
     cargo clean
+
+# Release archive for Apple Silicon (version like v0.1.0)
+package version:
+    bash scripts/package-macos.sh '{{version}}'

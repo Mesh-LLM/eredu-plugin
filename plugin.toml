@@ -1,0 +1,4 @@
+name = "eredu-plugin"
+version = "0.1.0"
+description = "Run a local MLX model on Apple Silicon with Eredu, served through Mesh."
+command = "eredu-plugin"
