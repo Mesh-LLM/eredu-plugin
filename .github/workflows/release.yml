@@ -11,14 +11,18 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: Metal toolchain
+      - name: Newest Xcode and Metal toolchain
         run: |
+          # MLX NAX kernels need a recent Metal compiler (Xcode 16.4's fails).
+          xcode=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
           xcrun metal --version || { xcodebuild -downloadComponent MetalToolchain && xcrun metal --version; }
       - name: Verify (mock tests, fmt, clippy)
         run: |
