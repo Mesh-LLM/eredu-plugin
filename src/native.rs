@@ -9,7 +9,7 @@ use eredu::{
         LoadedModel, PreparedChatGenerationRequest, PreparedChatGenerationSettings,
         PreparedChatInput, default_local_device, local_device_plan,
     },
-    runtime::chat::ChatTemplateRequest,
+    runtime::chat::{ChatTemplateRequest, NativeToolSupport, ParallelToolCallPolicy, ToolChoice},
 };
 use eredu_backend_mlx::MlxBackendFactory;
 use eredu_core::ExecutionPlanBackendFactory;
@@ -37,21 +37,38 @@ impl Backend for Native {
         request: ChatRequest,
         work: &ActiveWork,
         output: &mpsc::Sender<Event>,
-    ) -> Result<()> {
-        if !request.tools.is_empty()
+    ) -> Result<&'static str> {
+        let needs_tools = !request.tools.is_empty()
             || request
                 .messages
                 .iter()
-                .any(|m| m.get("tool_calls").is_some() || m["role"] == "tool")
-        {
-            bail!("native tool calls are not yet validated by this adapter");
-        }
+                .any(|m| m.get("tool_calls").is_some() || m["role"] == "tool");
         self.0.reset()?;
+        let tool_choice = match request.tool_choice.as_deref() {
+            Some("none") => ToolChoice::None,
+            Some("required") => ToolChoice::Required,
+            _ => ToolChoice::Auto,
+        };
         let prepared = self.0.prepare_chat(ChatTemplateRequest {
             messages: request.messages,
+            tools: request.tools,
+            tool_choice,
+            parallel_tool_calls: if request.parallel_tool_calls {
+                ParallelToolCallPolicy::Enabled { max_calls: None }
+            } else {
+                ParallelToolCallPolicy::Disabled
+            },
+            enable_thinking: request.enable_thinking,
             add_generation_prompt: true,
             ..Default::default()
         })?;
+        if needs_tools
+            && let NativeToolSupport::Unsupported { reason } = prepared.native_tool_support()
+        {
+            bail!("native tools unavailable for this template: {reason}");
+        }
+        let mut started_calls = 0usize;
+        let mut ended_calls = 0usize;
         let cancellation = GenerationCancellationToken::new();
         let mut delivery_failed = false;
         let result = self
@@ -74,8 +91,27 @@ impl Backend for Native {
                         cancellation.cancel();
                         return;
                     }
-                    if let SemanticEvent::TextDelta(text) = event
-                        && publish(output, Event::Text(text)).is_err()
+                    let event = match event {
+                        SemanticEvent::TextDelta(text) => Some(Event::Text(text)),
+                        SemanticEvent::ToolCallStart { index, id, name } => {
+                            started_calls += 1;
+                            Some(Event::ToolStart { index, id, name })
+                        }
+                        SemanticEvent::ToolArgumentsDelta {
+                            index,
+                            json_fragment,
+                        } => Some(Event::ToolArguments {
+                            index,
+                            fragment: json_fragment,
+                        }),
+                        SemanticEvent::ToolCallEnd => {
+                            ended_calls += 1;
+                            None
+                        }
+                        _ => None,
+                    };
+                    if let Some(event) = event
+                        && publish(output, event).is_err()
                     {
                         delivery_failed = true;
                         cancellation.cancel();
@@ -85,12 +121,16 @@ impl Backend for Native {
         if delivery_failed || work.is_cancelled() {
             bail!("generation cancelled by consumer");
         }
+        if started_calls != ended_calls {
+            bail!("generation ended with incomplete tool calls");
+        }
         let reason = match result.finish_reason {
             FinishReason::MaxTokens => "length",
             FinishReason::Cancelled => bail!("generation cancelled"),
+            _ if started_calls > 0 => "tool_calls",
             _ => "stop",
         };
-        publish(output, Event::Finished(reason))
+        Ok(reason)
     }
 
     fn settle(&mut self) -> Result<()> {
