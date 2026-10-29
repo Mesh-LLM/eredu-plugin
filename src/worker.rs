@@ -8,6 +8,15 @@ use tokio::sync::mpsc;
 
 pub enum Event {
     Text(String),
+    ToolStart {
+        index: usize,
+        id: String,
+        name: String,
+    },
+    ToolArguments {
+        index: usize,
+        fragment: String,
+    },
     Finished(&'static str),
     Error(String),
 }
@@ -18,7 +27,7 @@ pub trait Backend: 'static {
         request: ChatRequest,
         work: &ActiveWork,
         output: &mpsc::Sender<Event>,
-    ) -> Result<()>;
+    ) -> Result<&'static str>;
     /// Must establish device completion before the request lease can be released.
     fn settle(&mut self) -> Result<()>;
 }
@@ -61,13 +70,21 @@ impl Worker {
                 }
                 while let Some(job) = input.blocking_recv() {
                     let result = backend.generate(job.request, &job.work, &job.output);
-                    // Settlement failure poisons the worker: never reuse native state.
-                    if let Err(error) = backend.settle() {
-                        let _ = job.output.try_send(Event::Error(error.to_string()));
-                        break;
-                    }
-                    if let Err(error) = result {
-                        let _ = job.output.try_send(Event::Error(error.to_string()));
+                    // Hold the final event until settlement releases admission. A client may
+                    // immediately submit its tool result after observing completion.
+                    let settled = backend.settle();
+                    drop(job.work);
+                    match (result, settled) {
+                        (_, Err(error)) => {
+                            let _ = job.output.try_send(Event::Error(error.to_string()));
+                            break;
+                        }
+                        (Err(error), Ok(())) => {
+                            let _ = job.output.try_send(Event::Error(error.to_string()));
+                        }
+                        (Ok(reason), Ok(())) => {
+                            let _ = job.output.try_send(Event::Finished(reason));
+                        }
                     }
                 }
             })?;
@@ -128,13 +145,13 @@ mod tests {
             _: ChatRequest,
             work: &ActiveWork,
             output: &mpsc::Sender<Event>,
-        ) -> Result<()> {
+        ) -> Result<&'static str> {
             while !work.is_cancelled() {
                 if publish(output, Event::Text("hello".into())).is_err() {
                     break;
                 }
             }
-            Ok(())
+            Ok("stop")
         }
         fn settle(&mut self) -> Result<()> {
             self.0.store(true, Ordering::Release);
@@ -164,5 +181,31 @@ mod tests {
                 .await
                 .is_err()
         );
+    }
+    struct Immediate;
+    impl Backend for Immediate {
+        fn generate(
+            &mut self,
+            _: ChatRequest,
+            _: &ActiveWork,
+            _: &mpsc::Sender<Event>,
+        ) -> Result<&'static str> {
+            Ok("stop")
+        }
+        fn settle(&mut self) -> Result<()> {
+            Ok(())
+        }
+    }
+    #[tokio::test]
+    async fn completion_releases_admission_before_immediate_followup() {
+        let worker = Worker::start(|| Ok(Immediate)).await.unwrap();
+        for _ in 0..100 {
+            let mut generation = worker.submit(request()).unwrap();
+            assert!(matches!(
+                generation.events.recv().await,
+                Some(Event::Finished("stop"))
+            ));
+            // Do not wait for channel closure before starting the next request.
+        }
     }
 }

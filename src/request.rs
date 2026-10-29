@@ -11,6 +11,11 @@ pub struct ChatRequest {
     pub stream: bool,
     #[serde(default)]
     pub tools: Vec<Value>,
+    #[serde(default)]
+    pub tool_choice: Option<String>,
+    #[serde(default)]
+    pub parallel_tool_calls: bool,
+    pub enable_thinking: Option<bool>,
     pub max_tokens: Option<usize>,
     pub temperature: Option<f32>,
 }
@@ -28,6 +33,30 @@ impl ChatRequest {
         }
         if self.temperature.is_some_and(|t| !t.is_finite() || t < 0.0) {
             bail!("temperature must be finite and nonnegative");
+        }
+        if self.tools.len() > 128 {
+            bail!("at most 128 tools are supported");
+        }
+        if let Some(choice) = self.tool_choice.as_deref() {
+            if !matches!(choice, "auto" | "none" | "required") {
+                bail!("tool_choice must be auto, none or required; named selection is unsupported");
+            }
+            if choice == "required" && self.tools.is_empty() {
+                bail!("tool_choice required needs tools");
+            }
+        }
+        for tool in &self.tools {
+            if tool["type"] != "function"
+                || tool
+                    .pointer("/function/name")
+                    .and_then(Value::as_str)
+                    .is_none_or(str::is_empty)
+                || !tool
+                    .pointer("/function/parameters")
+                    .is_some_and(Value::is_object)
+            {
+                bail!("tools require function name and JSON schema parameters");
+            }
         }
         for message in &mut self.messages {
             normalize_message(message)?;
@@ -98,5 +127,25 @@ mod tests {
     fn rejects_missing_tool_result_identity() {
         let mut message = json!({"role":"tool", "content":"sunny"});
         assert!(normalize_message(&mut message).is_err());
+    }
+    #[test]
+    fn validates_tool_policy_and_schemas() {
+        for policy in [
+            json!("bogus"),
+            json!({"type":"function","function":{"name":"weather"}}),
+            json!("required"),
+        ] {
+            let request: Result<ChatRequest, _> = serde_json::from_value(
+                json!({"model":"local","messages":[{"role":"user","content":"hi"}],"tool_choice":policy}),
+            );
+            assert!(
+                request
+                    .map_err(anyhow::Error::from)
+                    .and_then(|r| r.prepare("local"))
+                    .is_err()
+            );
+        }
+        let request: ChatRequest = serde_json::from_value(json!({"model":"local","messages":[{"role":"user","content":"hi"}],"tools":[{"type":"function","function":{"name":"x"}}]})).unwrap();
+        assert!(request.prepare("local").is_err());
     }
 }

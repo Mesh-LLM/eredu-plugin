@@ -4,8 +4,23 @@ Run a local MLX model on your Apple Silicon Mac with
 [Eredu](https://github.com/jbg/eredu), served through Mesh's normal
 OpenAI-compatible API.
 
-**Early access:** Apple Silicon (macOS arm64) only. Text chat and streaming;
-tool calls are rejected for now.
+**Early access:** Apple Silicon (macOS arm64) only. Text chat, streaming and
+checkpoint-native function calls through OpenAI JSON/SSE. Tools require an Eredu
+registered native-tool template; unsupported templates fail closed.
+
+Tool requests support `tools`, `tool_choice` (`auto`, `none`, `required`),
+`parallel_tool_calls` (default false), and `enable_thinking`. Named-function
+`tool_choice` objects are not supported and are rejected, not silently ignored.
+The plugin returns calls for your client to execute; it never executes tools.
+Replay the assistant message and a `role: "tool"` message with its `tool_call_id`
+to supply results. Function arguments on the wire are JSON strings.
+
+Validated locally with an existing `mlx-community/Qwen3-1.7B-4bit` checkpoint:
+required tool call, result replay with `tool_choice: "none"` and a nonempty
+follow-up, plus streaming tool-call output (`enable_thinking: false`). This is
+single-node adapter evidence, not qualification of every model, parallel tool
+execution, agent harness, or remote Mesh routing. Readiness does not advertise
+blanket model tool capability.
 
 ## 1. Install
 
