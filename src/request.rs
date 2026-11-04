@@ -109,6 +109,11 @@ fn normalize_message(message: &mut Value) -> Result<()> {
     if role == Some("tool") && object.get("tool_call_id").and_then(Value::as_str).is_none() {
         bail!("tool results require tool_call_id");
     }
+    // OpenAI clients replay tool-call turns with `content: null` (the shape this plugin
+    // emits); checkpoint templates test `content` as text, so give them an empty string.
+    if role == Some("assistant") && object.get("content").is_none_or(Value::is_null) {
+        object.insert("content".to_string(), Value::String(String::new()));
+    }
     if let Some(calls) = object.get_mut("tool_calls") {
         let Some(calls) = calls.as_array_mut() else {
             bail!("tool_calls must be an array");
@@ -190,6 +195,20 @@ mod tests {
                 .is_err()
         );
         assert!(prepare(json!({"model":"local","messages":user,"use_reasoning":true})).is_err());
+    }
+
+    #[test]
+    fn replayed_null_assistant_content_becomes_text() {
+        for mut message in [
+            json!({"role":"assistant","content":null,"tool_calls":[]}),
+            json!({"role":"assistant","tool_calls":[]}),
+        ] {
+            normalize_message(&mut message).unwrap();
+            assert_eq!(message["content"], "");
+        }
+        let mut kept = json!({"role":"assistant","content":"x"});
+        normalize_message(&mut kept).unwrap();
+        assert_eq!(kept["content"], "x");
     }
 
     #[test]
