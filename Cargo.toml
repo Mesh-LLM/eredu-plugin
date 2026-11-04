@@ -18,9 +18,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 mesh-llm-plugin = { git = "https://github.com/Mesh-LLM/mesh-llm.git", rev = "bc215ce5b880e21c6c3840b8574ab64f83278821" }
-eredu = { git = "https://github.com/jbg/eredu", rev = "d5683bb3a454a627b1023713a053d0a0d5a3c74a", default-features = false, optional = true }
-eredu-core = { git = "https://github.com/jbg/eredu", rev = "d5683bb3a454a627b1023713a053d0a0d5a3c74a", optional = true }
-eredu-backend-mlx = { git = "https://github.com/jbg/eredu", rev = "d5683bb3a454a627b1023713a053d0a0d5a3c74a", default-features = false, optional = true }
+eredu = { git = "https://github.com/jbg/eredu", rev = "465cf519fc5e0f90a40072320aa1d546103fbcc8", default-features = false, optional = true }
+eredu-core = { git = "https://github.com/jbg/eredu", rev = "465cf519fc5e0f90a40072320aa1d546103fbcc8", optional = true }
+eredu-backend-mlx = { git = "https://github.com/jbg/eredu", rev = "465cf519fc5e0f90a40072320aa1d546103fbcc8", default-features = false, optional = true }
 
 [lints.rust]
 unsafe_code = "forbid"
