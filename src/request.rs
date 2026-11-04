@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -16,6 +16,12 @@ pub struct ChatRequest {
     #[serde(default)]
     pub parallel_tool_calls: bool,
     pub enable_thinking: Option<bool>,
+    /// OpenAI `reasoning_effort`; `none` disables thinking, the other levels enable it.
+    pub reasoning_effort: Option<String>,
+    /// Checkpoint chat-template variables. Mesh canonicalizes every thinking knob
+    /// into `chat_template_kwargs.enable_thinking` before forwarding a request.
+    #[serde(default)]
+    pub chat_template_kwargs: Map<String, Value>,
     pub max_tokens: Option<usize>,
     pub temperature: Option<f32>,
 }
@@ -61,7 +67,34 @@ impl ChatRequest {
         for message in &mut self.messages {
             normalize_message(message)?;
         }
+        self.enable_thinking = self.resolve_enable_thinking()?;
         Ok(self)
+    }
+
+    /// Same precedence as Mesh's reasoning normalization: `reasoning_effort`,
+    /// then the explicit `enable_thinking` flag, then caller-supplied
+    /// `chat_template_kwargs.enable_thinking`, which is authoritative.
+    fn resolve_enable_thinking(&mut self) -> Result<Option<bool>> {
+        let mut enabled = match self.reasoning_effort.as_deref() {
+            None => None,
+            Some("none") => Some(false),
+            Some("minimal" | "low" | "medium" | "high" | "xhigh" | "max") => Some(true),
+            Some(_) => {
+                bail!(
+                    "reasoning_effort must be one of none, minimal, low, medium, high, xhigh, max"
+                )
+            }
+        };
+        if let Some(explicit) = self.enable_thinking {
+            enabled = Some(explicit);
+        }
+        if let Some(value) = self.chat_template_kwargs.remove("enable_thinking") {
+            let Some(flag) = value.as_bool() else {
+                bail!("chat_template_kwargs.enable_thinking must be a boolean");
+            };
+            enabled = Some(flag);
+        }
+        Ok(enabled)
     }
 }
 
@@ -75,6 +108,11 @@ fn normalize_message(message: &mut Value) -> Result<()> {
     }
     if role == Some("tool") && object.get("tool_call_id").and_then(Value::as_str).is_none() {
         bail!("tool results require tool_call_id");
+    }
+    // OpenAI clients replay tool-call turns with `content: null` (the shape this plugin
+    // emits); checkpoint templates test `content` as text, so give them an empty string.
+    if role == Some("assistant") && object.get("content").is_none_or(Value::is_null) {
+        object.insert("content".to_string(), Value::String(String::new()));
     }
     if let Some(calls) = object.get_mut("tool_calls") {
         let Some(calls) = calls.as_array_mut() else {
@@ -114,6 +152,63 @@ mod tests {
         );
         assert_eq!(prepared.messages[0]["tool_calls"][0]["id"], "call_7");
         assert_eq!(prepared.messages[1]["tool_call_id"], "call_7");
+    }
+
+    #[test]
+    fn thinking_knobs_follow_mesh_precedence() {
+        let prepare = |body: Value| {
+            serde_json::from_value::<ChatRequest>(body)
+                .map_err(anyhow::Error::from)
+                .and_then(|r| r.prepare("local"))
+        };
+        let user = json!([{"role":"user","content":"hi"}]);
+        let prepared = prepare(
+            json!({"model":"local","messages":user,"enable_thinking":true,
+            "reasoning_effort":"none","chat_template_kwargs":{"enable_thinking":false,"custom":7}}),
+        )
+        .unwrap();
+        assert_eq!(prepared.enable_thinking, Some(false));
+        assert_eq!(
+            prepared.chat_template_kwargs,
+            json!({"custom":7}).as_object().cloned().unwrap()
+        );
+        let prepared =
+            prepare(json!({"model":"local","messages":user,"reasoning_effort":"low"})).unwrap();
+        assert_eq!(prepared.enable_thinking, Some(true));
+        let prepared = prepare(
+            json!({"model":"local","messages":user,"reasoning_effort":"none",
+            "enable_thinking":true}),
+        )
+        .unwrap();
+        assert_eq!(prepared.enable_thinking, Some(true));
+        assert_eq!(
+            prepare(json!({"model":"local","messages":user}))
+                .unwrap()
+                .enable_thinking,
+            None
+        );
+        assert!(
+            prepare(json!({"model":"local","messages":user,"reasoning_effort":"lots"})).is_err()
+        );
+        assert!(
+            prepare(json!({"model":"local","messages":user,"chat_template_kwargs":{"enable_thinking":"no"}}))
+                .is_err()
+        );
+        assert!(prepare(json!({"model":"local","messages":user,"use_reasoning":true})).is_err());
+    }
+
+    #[test]
+    fn replayed_null_assistant_content_becomes_text() {
+        for mut message in [
+            json!({"role":"assistant","content":null,"tool_calls":[]}),
+            json!({"role":"assistant","tool_calls":[]}),
+        ] {
+            normalize_message(&mut message).unwrap();
+            assert_eq!(message["content"], "");
+        }
+        let mut kept = json!({"role":"assistant","content":"x"});
+        normalize_message(&mut kept).unwrap();
+        assert_eq!(kept["content"], "x");
     }
 
     #[test]

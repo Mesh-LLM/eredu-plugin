@@ -41,9 +41,9 @@ fn check_model(path: PathBuf) -> Result<()> {
 
     let owner = std::thread::spawn(move || -> Result<()> {
         let plan = ExecutionPlan::fully_resident(local_device_plan(default_local_device())?);
-        let planned =
+        let mut planned =
             LoadedModel::load_execution_plan(&MlxBackendFactory::default(), &path, &plan)?;
-        let (mut model, _) = planned.into_parts();
+        let model = planned.model_mut();
         model.reset()?;
         model.synchronize()?;
         println!("native load succeeded: {}", path.display());

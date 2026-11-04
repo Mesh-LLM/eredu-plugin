@@ -621,10 +621,11 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 [[package]]
 name = "eredu"
 version = "0.5.0"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "eredu-architectures",
  "eredu-backend-mlx",
+ "eredu-checkpoint",
  "eredu-core",
  "eredu-gguf",
  "eredu-media",
@@ -643,7 +644,7 @@ dependencies = [
 [[package]]
 name = "eredu-architectures"
 version = "0.5.0"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "eredu-checkpoint",
  "eredu-codec",
@@ -663,7 +664,7 @@ dependencies = [
 [[package]]
 name = "eredu-backend-mlx"
 version = "0.5.0"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "eredu-architectures",
  "eredu-backend-mlx-macros",
@@ -687,7 +688,7 @@ dependencies = [
 [[package]]
 name = "eredu-backend-mlx-macros"
 version = "0.1.0"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -697,7 +698,7 @@ dependencies = [
 [[package]]
 name = "eredu-checkpoint"
 version = "0.2.0"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "eredu-gguf",
  "safetensors",
@@ -710,7 +711,7 @@ dependencies = [
 [[package]]
 name = "eredu-codec"
 version = "0.5.0"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "eredu-checkpoint",
  "eredu-core",
@@ -722,7 +723,7 @@ dependencies = [
 [[package]]
 name = "eredu-core"
 version = "0.5.0"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "eredu-checkpoint",
  "eredu-gguf",
@@ -735,7 +736,7 @@ dependencies = [
 [[package]]
 name = "eredu-gguf"
 version = "0.1.0"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "half",
  "thiserror",
@@ -744,7 +745,7 @@ dependencies = [
 [[package]]
 name = "eredu-media"
 version = "0.4.0"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "eredu-core",
  "thiserror",
@@ -753,7 +754,7 @@ dependencies = [
 [[package]]
 name = "eredu-nn"
 version = "0.2.1"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "eredu-checkpoint",
  "eredu-nn-macros",
@@ -763,7 +764,7 @@ dependencies = [
 [[package]]
 name = "eredu-nn-macros"
 version = "0.1.0"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -791,7 +792,7 @@ dependencies = [
 [[package]]
 name = "eredu-runtime"
 version = "0.5.0"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "eredu-checkpoint",
  "eredu-core",
@@ -809,7 +810,7 @@ dependencies = [
 [[package]]
 name = "eredu-text"
 version = "0.1.1"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -2043,7 +2044,7 @@ checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 [[package]]
 name = "safemlx"
 version = "0.3.1"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "bytemuck",
  "half",
@@ -2065,7 +2066,7 @@ dependencies = [
 [[package]]
 name = "safemlx-internal-macros"
 version = "0.2.0"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "itertools 0.15.0",
  "proc-macro2",
@@ -2076,7 +2077,7 @@ dependencies = [
 [[package]]
 name = "safemlx-sys"
 version = "0.2.3"
-source = "git+https://github.com/jbg/eredu?rev=d5683bb3a454a627b1023713a053d0a0d5a3c74a#d5683bb3a454a627b1023713a053d0a0d5a3c74a"
+source = "git+https://github.com/jbg/eredu?rev=465cf519fc5e0f90a40072320aa1d546103fbcc8#465cf519fc5e0f90a40072320aa1d546103fbcc8"
 dependencies = [
  "cmake",
 ]

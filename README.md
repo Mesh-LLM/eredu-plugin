@@ -9,7 +9,11 @@ checkpoint-native function calls through OpenAI JSON/SSE. Tools require an Eredu
 registered native-tool template; unsupported templates fail closed.
 
 Tool requests support `tools`, `tool_choice` (`auto`, `none`, `required`),
-`parallel_tool_calls` (default false), and `enable_thinking`. Named-function
+`parallel_tool_calls` (default false), and thinking control through
+`enable_thinking`, `reasoning_effort` (`none` disables thinking) or
+`chat_template_kwargs.enable_thinking` — the form Mesh forwards, so these knobs
+work through Mesh too. Other `chat_template_kwargs` reach the checkpoint template
+unchanged. Named-function
 `tool_choice` objects are not supported and are rejected, not silently ignored.
 The plugin returns calls for your client to execute; it never executes tools.
 Replay the assistant message and a `role: "tool"` message with its `tool_call_id`
