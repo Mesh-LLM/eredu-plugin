@@ -61,6 +61,7 @@ impl Backend for Native {
                 ParallelToolCallPolicy::Disabled
             },
             enable_thinking: request.enable_thinking,
+            extra_template_kwargs: request.chat_template_kwargs,
             add_generation_prompt: true,
             ..Default::default()
         })?;
